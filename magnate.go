@@ -2,7 +2,7 @@ package magnate
 
 import (
 	"fmt"
-	"log"
+	"io"
 
 	"labix.org/v2/mgo"
 )
@@ -79,6 +79,7 @@ func (r Remove) Execute(c Client) error {
 
 type Migration struct {
 	Client
+	Out     io.Writer
 	Verbose bool
 	NoDry   bool
 }
@@ -86,7 +87,7 @@ type Migration struct {
 func (m Migration) Perform(ops ...Operation) error {
 	if m.Verbose {
 		for _, op := range ops {
-			log.Println(op.Describe())
+			fmt.Fprintln(m.Out, op.Describe())
 		}
 	}
 
