@@ -1,5 +1,12 @@
 package magnate
 
+import (
+	"fmt"
+	"log"
+
+	"labix.org/v2/mgo"
+)
+
 type Namer interface {
 	CollectionName() string
 }
