@@ -77,23 +77,23 @@ func (r Remove) Execute(c Client) error {
 	return c.C(r.Namer).Remove(r.Selector)
 }
 
-type Migration struct {
+type Runner struct {
 	Client
 	Out     io.Writer
 	Verbose bool
 	NoDry   bool
 }
 
-func (m Migration) Perform(ops ...Operation) error {
-	if m.Verbose {
+func (r Runner) Run(ops ...Operation) error {
+	if r.Verbose {
 		for _, op := range ops {
-			fmt.Fprintln(m.Out, op.Describe())
+			fmt.Fprintln(r.Out, op.Describe())
 		}
 	}
 
-	if m.NoDry {
+	if r.NoDry {
 		for _, op := range ops {
-			if err := op.Execute(m.Client); err != nil {
+			if err := op.Execute(r.Client); err != nil {
 				return err
 			}
 		}
