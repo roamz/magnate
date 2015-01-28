@@ -10,7 +10,7 @@ type Operation interface {
 // backwards.
 type Change struct {
 	Forwards Operation
-	Rollback Operation
+	Revert   Operation
 }
 
 // Changes is an atomic set of changes that must be completed together.

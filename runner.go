@@ -42,27 +42,62 @@ type Runner struct {
 	ProgressBar bool
 }
 
-/*
-func (r Runner) Apply(changes Changes) error {
-	for i, change := range changes {
-		if r.Verbose {
-			if _, cerr = fmt.Fprintln(r.Out, op.Describe()); err != nil {
-				return err
-			}
+func (r Runner) Something(op Operation) error {
+	var err error
+
+	if r.Verbose {
+		if _, err = fmt.Fprintln(r.Out, op.Describe()); err != nil {
+			return err
 		}
+	}
 
 	if r.NoDry {
 		if err = op.Execute(r.Client); err != nil {
 			return err
 		}
 	}
+
+	return err
 }
 
+type RevertError struct {
+	error        // implicit forwards error
+	Revert error // extra revert error
+}
+
+func (r Runner) Apply(forwards Changes) error {
+	var (
+		change    Change
+		revert    Changes
+		err, rerr error
+	)
+
+	for _, change = range forwards {
+		if err = r.Something(change.Forwards); err != nil {
+			break
+		}
+
+		revert.Push(change)
+	}
+
+	if err == nil {
+		return err
+	}
+
+	for !revert.Empty() {
+		change = revert.Pop()
+		if rerr = r.Something(change.Revert); rerr != nil {
+			return RevertError{err, rerr}
+		}
+	}
+
+	return err
+}
 
 func (r Runner) Run(cs ChangeSet) error {
 	var (
 		bar *pb.ProgressBar
-		err, cerr error
+		err error
 		mcc = make(chan MaybeChanges)
 	)
 
@@ -74,31 +109,14 @@ func (r Runner) Run(cs ChangeSet) error {
 
 	go cs.Func(mcc)
 	for changes := range mcc {
-		if changes.Err != nil {
-			err = changes.Err
-		}
-
-		if err != nil {
-			continue
-		}
-
-		for _, change := range changes.Changes {
-			if r.Verbose {
-				if _, cerr = fmt.Fprintln(r.Out, op.Describe()); err != nil {
-					return err
-				}
-			}
-
-		if r.NoDry {
-			if err = op.Execute(r.Client); err != nil {
-				return err
-			}
+		if err = r.Apply(changes.Changes); err != nil {
+			// signal mcc to exit
+			break
 		}
 	}
 
 	return err
 }
-*/
 
 func (r Runner) Run(ops ...Operation) error {
 	var bar *pb.ProgressBar
