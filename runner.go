@@ -42,6 +42,64 @@ type Runner struct {
 	ProgressBar bool
 }
 
+/*
+func (r Runner) Apply(changes Changes) error {
+	for i, change := range changes {
+		if r.Verbose {
+			if _, cerr = fmt.Fprintln(r.Out, op.Describe()); err != nil {
+				return err
+			}
+		}
+
+	if r.NoDry {
+		if err = op.Execute(r.Client); err != nil {
+			return err
+		}
+	}
+}
+
+
+func (r Runner) Run(cs ChangeSet) error {
+	var (
+		bar *pb.ProgressBar
+		err, cerr error
+		mcc = make(chan MaybeChanges)
+	)
+
+	if r.ProgressBar {
+		bar = pb.StartNew(cs.Count)
+		bar.ShowSpeed = true
+		defer bar.Finish()
+	}
+
+	go cs.Func(mcc)
+	for changes := range mcc {
+		if changes.Err != nil {
+			err = changes.Err
+		}
+
+		if err != nil {
+			continue
+		}
+
+		for _, change := range changes.Changes {
+			if r.Verbose {
+				if _, cerr = fmt.Fprintln(r.Out, op.Describe()); err != nil {
+					return err
+				}
+			}
+
+		if r.NoDry {
+			if err = op.Execute(r.Client); err != nil {
+				return err
+			}
+		}
+	}
+
+	return err
+}
+*/
+
 func (r Runner) Run(ops ...Operation) error {
 	var bar *pb.ProgressBar
 	if r.ProgressBar {

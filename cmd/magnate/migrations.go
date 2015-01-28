@@ -33,13 +33,16 @@ func Up(r Runner, n int) error {
 			status.Migration.Label(),
 		)
 
-		ops, err := status.Migration.Up(r.Client)
+		if err := MarkPartialMigration(r, status.Migration); err != nil {
+			return markError(err, status.Migration)
+		}
+
+		cs, err := status.Migration.Up(r.Client)
 		if err != nil {
 			return opGatherError(err, status.Migration)
 		}
 
-		err = r.Run(ops...)
-		if err != nil {
+		if err = r.Run(cs); err != nil {
 			return opPerformError(err, status.Migration)
 		}
 

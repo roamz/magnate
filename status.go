@@ -31,9 +31,11 @@ func Statuses(
 ) ([]MigrationStatus, error) {
 	var statuses []MigrationStatus
 	for _, migration := range migrations {
-		marker, exists, err := HasMigrated(c, migration)
+		_, exists, err := MigrationMarker(c, migration)
 		if err != nil {
-			return statuses, checkError(err, migration)
+			return statuses, err
+			// TODO:FIX
+			//return statuses, checkError(err, migration)
 		}
 
 		statuses = append(statuses, MigrationStatus{migration, exists})
@@ -74,7 +76,9 @@ func Clean(
 
 		if applying && alreadyApplied(status) {
 			err := errors.New("bad migration application")
-			return cleaned, applicationError(err, status.Migration)
+			//TODO:FIX
+			//return cleaned, applicationError(err, status.Migration)
+			return cleaned, err
 		}
 
 		if applying {
@@ -108,6 +112,7 @@ func MarkMigration(r Runner, m Migration) error {
 		bson.NewObjectId(),
 		m.Number(),
 		m.Label(),
+		false,
 	}
 
 	return r.Client.C(marker).Insert(marker)
