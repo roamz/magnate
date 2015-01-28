@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rakyll/pb"
+	"github.com/cheggaaa/pb"
 )
 
 type OpErr struct {
@@ -113,8 +113,13 @@ func (r Runner) Run(cs ChangeSet) error {
 			// signal mcc to exit
 			break
 		}
+
+		if r.ProgressBar {
+			bar.Increment()
+		}
 	}
 
+	bar.Finish()
 	return err
 }
 
