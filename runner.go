@@ -119,7 +119,6 @@ func (r Runner) Run(cs ChangeSet) error {
 		}
 	}
 
-	bar.Finish()
 	return err
 }
 
