@@ -1,4 +1,4 @@
-package main
+package magnate
 
 import (
 	"fmt"
@@ -6,9 +6,9 @@ import (
 )
 
 func (r Runner) Up(n int, migrations ...Migration) error {
-	By(Ascending).Sort(migrations)
+	MigrationBy(Ascending).Sort(migrations)
 
-	statuses, err := Statuses(r.Client, migrations...)
+	statuses, err := Statuses(r.FC.Client, migrations...)
 	if err != nil {
 		return err
 	}
@@ -30,7 +30,7 @@ func (r Runner) Up(n int, migrations ...Migration) error {
 			return markError(err, status.Migration)
 		}
 
-		cs, err := status.Migration.Up(r.Client)
+		cs, err := status.Migration.Up(r.FC)
 		if err != nil {
 			return opGatherError(err, status.Migration)
 		}
@@ -49,9 +49,9 @@ func (r Runner) Up(n int, migrations ...Migration) error {
 }
 
 func (r Runner) Down(n int, migrations ...Migration) error {
-	By(Descending).Sort(migrations)
+	MigrationBy(Descending).Sort(migrations)
 
-	statuses, err := Statuses(r.Client, migrations...)
+	statuses, err := Statuses(r.FC.Client, migrations...)
 	if err != nil {
 		return err
 	}
@@ -69,12 +69,12 @@ func (r Runner) Down(n int, migrations ...Migration) error {
 			status.Migration.Label(),
 		)
 
-		ops, err := status.Migration.Down(r.Client)
+		cs, err := status.Migration.Down(r.FC)
 		if err != nil {
 			return opGatherError(err, status.Migration)
 		}
 
-		if err = r.Run(ops...); err != nil {
+		if err = r.Run(cs); err != nil {
 			return opPerformError(err, status.Migration)
 		}
 
@@ -87,18 +87,25 @@ func (r Runner) Down(n int, migrations ...Migration) error {
 	return nil
 }
 
-func Status(r Runner) error {
-	By(Ascending).Sort(migrations)
+func (r Runner) Status(migrations ...Migration) error {
+	MigrationBy(Ascending).Sort(migrations)
 
 	for _, migration := range migrations {
-		has, err := HasMigrated(r.Client, migration)
+		_, status, err := MigrationMarker(r.FC.Client, migration)
 		if err != nil {
 			return checkError(err, migration)
 		}
 
-		ch := ' '
-		if has {
+		var ch rune
+		switch status {
+		case Pending:
+			ch = ' '
+		case Partial:
+			ch = '-'
+		case Migrated:
 			ch = '*'
+		default:
+			ch = '?'
 		}
 
 		fmt.Fprintf(

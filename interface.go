@@ -14,6 +14,13 @@ type Change struct {
 	Revert   Operation
 }
 
+func (c Change) Reverse() Change {
+	return Change{
+		c.Revert,
+		c.Forwards,
+	}
+}
+
 // Changes is an atomic set of changes that must be completed together.
 type Changes []Change
 
@@ -33,14 +40,17 @@ type FailingClient struct {
 	Err error
 }
 
+func NewFailingClient(c Client) *FailingClient {
+	return &FailingClient{Client: c}
+}
+
 // ChangeSet is a set of changes to be applied. Count indicates to the runner
 // how many operations the set consists of. Err is an error that may be set at
 // any point during the execution of Func, and will be checked by the Runner
 // after the Changes channel has been closed.
 type ChangeSet struct {
-	Func  func(chan<- Changes)
 	Count int
-	Err   error
+	Func  func(chan<- Changes, *error)
 }
 
 type Migration interface {

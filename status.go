@@ -48,9 +48,7 @@ func Statuses(
 	for _, migration := range migrations {
 		_, status, err := MigrationMarker(c, migration)
 		if err != nil {
-			return statuses, err
-			// TODO:FIX
-			//return statuses, checkError(err, migration)
+			return statuses, checkError(err, migration)
 		}
 
 		statuses = append(statuses, Status{migration, status})
@@ -91,9 +89,7 @@ func Clean(
 
 		if applying && alreadyApplied(status) {
 			err := errors.New("bad migration application")
-			//TODO:FIX
-			//return cleaned, applicationError(err, status.Migration)
-			return cleaned, err
+			return cleaned, applicationError(err, status.Migration)
 		}
 
 		if applying {

@@ -1,10 +1,6 @@
-package main
+package magnate
 
-import (
-	"fmt"
-
-	"github.com/dagoof/magnate"
-)
+import "fmt"
 
 // Stages are various places that might return an error during migration
 type Stage int
@@ -69,7 +65,7 @@ func opGatherError(err error, migration Migration) MigrationError {
 func opPerformError(err error, migration Migration) MigrationError {
 	var description string
 	switch v := err.(type) {
-	case magnate.OpErr:
+	case OpErr:
 		description = fmt.Sprintf(
 			"migration %d:%s failed on operation %s",
 			migration.Number(),

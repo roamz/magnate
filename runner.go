@@ -74,9 +74,9 @@ func (r Runner) Apply(forwards Changes) error {
 
 func (r Runner) Run(cs *ChangeSet) error {
 	var (
-		bar *pb.ProgressBar
-		err error
-		mcc = make(chan Changes)
+		bar        *pb.ProgressBar
+		err, cserr error
+		mcc        = make(chan Changes)
 	)
 
 	if r.ProgressBar {
@@ -85,7 +85,7 @@ func (r Runner) Run(cs *ChangeSet) error {
 		defer bar.Finish()
 	}
 
-	go cs.Func(mcc)
+	go cs.Func(mcc, &cserr)
 	for changes := range mcc {
 		if r.FC.Err != nil {
 			continue
@@ -101,5 +101,9 @@ func (r Runner) Run(cs *ChangeSet) error {
 		}
 	}
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return cserr
 }
