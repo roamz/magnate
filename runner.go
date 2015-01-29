@@ -35,7 +35,7 @@ func Execute(c Client, ops ...Operation) error {
 }
 
 type Runner struct {
-	Client
+	Client      *FailingClient
 	Out         io.Writer
 	Verbose     bool
 	NoDry       bool
@@ -94,11 +94,11 @@ func (r Runner) Apply(forwards Changes) error {
 	return err
 }
 
-func (r Runner) Run(cs ChangeSet) error {
+func (r Runner) Run(cs *ChangeSet) error {
 	var (
 		bar *pb.ProgressBar
 		err error
-		mcc = make(chan MaybeChanges)
+		mcc = make(chan Changes)
 	)
 
 	if r.ProgressBar {
@@ -109,44 +109,17 @@ func (r Runner) Run(cs ChangeSet) error {
 
 	go cs.Func(mcc)
 	for changes := range mcc {
+		if r.Client.Err != nil {
+			continue
+		}
+
 		if err = r.Apply(changes.Changes); err != nil {
-			// signal mcc to exit
-			break
+			r.Client.Err = err
+			continue
 		}
 
 		if r.ProgressBar {
 			bar.Increment()
-		}
-	}
-
-	return err
-}
-
-func (r Runner) Run(ops ...Operation) error {
-	var bar *pb.ProgressBar
-	if r.ProgressBar {
-		bar = pb.StartNew(len(ops))
-		bar.ShowSpeed = true
-		defer bar.Finish()
-	}
-
-	var err error
-
-	for _, op := range ops {
-		if r.ProgressBar {
-			bar.Increment()
-		}
-
-		if r.Verbose {
-			if _, err = fmt.Fprintln(r.Out, op.Describe()); err != nil {
-				return err
-			}
-		}
-
-		if r.NoDry {
-			if err = op.Execute(r.Client); err != nil {
-				return err
-			}
 		}
 	}
 
