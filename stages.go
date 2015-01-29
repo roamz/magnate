@@ -100,3 +100,16 @@ func markError(err error, migration Migration) MigrationError {
 		),
 	}
 }
+
+func markPartialError(err error, migration Migration) MigrationError {
+	return MigrationError{
+		err,
+		migration,
+		MigrationMark,
+		fmt.Sprintf(
+			"failed to mark partial migration %d:%s",
+			migration.Number(),
+			migration.Label(),
+		),
+	}
+}

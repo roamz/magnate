@@ -106,7 +106,36 @@ func Clean(
 	return cleaned, nil
 }
 
-func (r Runner) UnMarkMigration(m Migration) error {
+func (r Runner) MarkMigration(m Migration) error {
+	if !r.NoDry {
+		return nil
+	}
+
+	query := bson.M{"number": m.Number()}
+	update := bson.M{"$unset": bson.M{"partial": true}}
+	return r.FC.C(Marker{}).Update(query, update)
+}
+
+func (r Runner) MarkPartialMigration(status Status) error {
+	if !r.NoDry {
+		return nil
+	}
+
+	if status.MigrationStatus == Partial {
+		return nil
+	}
+
+	marker := Marker{
+		bson.NewObjectId(),
+		status.Migration.Number(),
+		status.Migration.Label(),
+		true,
+	}
+
+	return r.FC.C(marker).Insert(marker)
+}
+
+func (r Runner) MarkDownMigration(m Migration) error {
 	if !r.NoDry {
 		return nil
 	}
@@ -114,27 +143,16 @@ func (r Runner) UnMarkMigration(m Migration) error {
 	return r.FC.C(Marker{}).Remove(bson.M{"number": m.Number()})
 }
 
-func (r Runner) MarkMigration(m Migration) error {
+func (r Runner) MarkPartialDownMigration(status Status) error {
 	if !r.NoDry {
 		return nil
 	}
 
-	marker := Marker{
-		bson.NewObjectId(),
-		m.Number(),
-		m.Label(),
-		false,
-	}
-
-	return r.FC.C(marker).Insert(marker)
-}
-
-func (r Runner) MarkPartialMigration(m Migration) error {
-	if !r.NoDry {
+	if status.MigrationStatus == Partial {
 		return nil
 	}
 
-	query := bson.M{"number": m.Number(), "partial": true}
-	update := bson.M{"$unset": bson.M{"partial": true}}
+	query := bson.M{"number": status.Migration.Number()}
+	update := bson.M{"$set": bson.M{"partial": true}}
 	return r.FC.C(Marker{}).Update(query, update)
 }

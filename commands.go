@@ -26,8 +26,8 @@ func (r Runner) Up(n int, migrations ...Migration) error {
 			status.Migration.Label(),
 		)
 
-		if err := r.MarkPartialMigration(status.Migration); err != nil {
-			return markError(err, status.Migration)
+		if err := r.MarkPartialMigration(status); err != nil {
+			return markPartialError(err, status.Migration)
 		}
 
 		cs, err := status.Migration.Up(r.FC)
@@ -69,6 +69,10 @@ func (r Runner) Down(n int, migrations ...Migration) error {
 			status.Migration.Label(),
 		)
 
+		if err := r.MarkPartialDownMigration(status); err != nil {
+			return markPartialError(err, status.Migration)
+		}
+
 		cs, err := status.Migration.Down(r.FC)
 		if err != nil {
 			return opGatherError(err, status.Migration)
@@ -78,7 +82,7 @@ func (r Runner) Down(n int, migrations ...Migration) error {
 			return opPerformError(err, status.Migration)
 		}
 
-		if err = r.UnMarkMigration(status.Migration); err != nil {
+		if err = r.MarkDownMigration(status.Migration); err != nil {
 			return markError(err, status.Migration)
 		}
 
