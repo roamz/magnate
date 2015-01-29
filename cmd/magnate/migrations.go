@@ -1,18 +1,11 @@
-package magnate
+package main
 
 import (
 	"fmt"
 	"os"
 )
 
-type Migration interface {
-	Number() int
-	Label() string
-	Up(Client) ([]Operation, error)
-	Down(Client) ([]Operation, error)
-}
-
-func Up(r Runner, n int) error {
+func (r Runner) Up(n int, migrations ...Migration) error {
 	By(Ascending).Sort(migrations)
 
 	statuses, err := Statuses(r.Client, migrations...)
@@ -33,7 +26,7 @@ func Up(r Runner, n int) error {
 			status.Migration.Label(),
 		)
 
-		if err := MarkPartialMigration(r, status.Migration); err != nil {
+		if err := r.MarkPartialMigration(status.Migration); err != nil {
 			return markError(err, status.Migration)
 		}
 
@@ -46,7 +39,7 @@ func Up(r Runner, n int) error {
 			return opPerformError(err, status.Migration)
 		}
 
-		if err = MarkMigration(r, status.Migration); err != nil {
+		if err = r.MarkMigration(status.Migration); err != nil {
 			return markError(err, status.Migration)
 		}
 
@@ -55,7 +48,7 @@ func Up(r Runner, n int) error {
 	return nil
 }
 
-func Down(r Runner, n int) error {
+func (r Runner) Down(n int, migrations ...Migration) error {
 	By(Descending).Sort(migrations)
 
 	statuses, err := Statuses(r.Client, migrations...)
@@ -85,7 +78,7 @@ func Down(r Runner, n int) error {
 			return opPerformError(err, status.Migration)
 		}
 
-		if err = UnMarkMigration(r, status.Migration); err != nil {
+		if err = r.UnMarkMigration(status.Migration); err != nil {
 			return markError(err, status.Migration)
 		}
 

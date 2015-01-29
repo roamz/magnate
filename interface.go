@@ -38,8 +38,8 @@ type FailingClient struct {
 // any point during the execution of Func, and will be checked by the Runner
 // after the Changes channel has been closed.
 type ChangeSet struct {
-	Count int
 	Func  func(chan<- Changes)
+	Count int
 	Err   error
 }
 

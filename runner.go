@@ -12,30 +12,8 @@ type OpErr struct {
 	Operation
 }
 
-func Describe(out io.Writer, ops ...Operation) error {
-	var err error
-	for _, op := range ops {
-		if _, err = fmt.Fprintln(out, op.Describe()); err != nil {
-			return err
-		}
-	}
-
-	return err
-}
-
-func Execute(c Client, ops ...Operation) error {
-	var err error
-	for _, op := range ops {
-		if err = op.Execute(c); err != nil {
-			return OpErr{err, op}
-		}
-	}
-
-	return err
-}
-
 type Runner struct {
-	Client      *FailingClient
+	FC          *FailingClient
 	Out         io.Writer
 	Verbose     bool
 	NoDry       bool
@@ -52,7 +30,7 @@ func (r Runner) Something(op Operation) error {
 	}
 
 	if r.NoDry {
-		if err = op.Execute(r.Client); err != nil {
+		if err = op.Execute(r.FC.Client); err != nil {
 			return err
 		}
 	}
@@ -109,12 +87,12 @@ func (r Runner) Run(cs *ChangeSet) error {
 
 	go cs.Func(mcc)
 	for changes := range mcc {
-		if r.Client.Err != nil {
+		if r.FC.Err != nil {
 			continue
 		}
 
-		if err = r.Apply(changes.Changes); err != nil {
-			r.Client.Err = err
+		if err = r.Apply(changes); err != nil {
+			r.FC.Err = err
 			continue
 		}
 

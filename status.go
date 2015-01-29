@@ -7,66 +7,81 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
+// MigrationMarker attempts to get the Marker for a given Migration from the DB.
 func MigrationMarker(c Client, m Migration) (
 	marker Marker,
-	exists bool,
+	status MigrationStatus,
 	err error,
 ) {
 	err = c.C(marker).Find(bson.M{"number": m.Number()}).One(&marker)
-	if err != mgo.ErrNotFound {
-		exists = true
+
+	if err == mgo.ErrNotFound {
+		return marker, status, nil
 	}
 
-	return marker, exists, err
+	status = Migrated
+	if marker.Partial {
+		status = Partial
+	}
+
+	return marker, status, err
 }
 
-type MigrationStatus struct {
+type MigrationStatus int
+
+const (
+	Pending MigrationStatus = iota
+	Partial
+	Migrated
+)
+
+type Status struct {
 	Migration
-	Migrated bool
+	MigrationStatus
 }
 
 func Statuses(
 	c Client,
 	migrations ...Migration,
-) ([]MigrationStatus, error) {
-	var statuses []MigrationStatus
+) ([]Status, error) {
+	var statuses []Status
 	for _, migration := range migrations {
-		_, exists, err := MigrationMarker(c, migration)
+		_, status, err := MigrationMarker(c, migration)
 		if err != nil {
 			return statuses, err
 			// TODO:FIX
 			//return statuses, checkError(err, migration)
 		}
 
-		statuses = append(statuses, MigrationStatus{migration, exists})
+		statuses = append(statuses, Status{migration, status})
 	}
 
 	return statuses, nil
 }
 
-func CleanUp(n int, statuses ...MigrationStatus) ([]MigrationStatus, error) {
+func CleanUp(n int, statuses ...Status) ([]Status, error) {
 	return Clean(
-		func(status MigrationStatus) bool { return status.Migrated },
+		func(status Status) bool { return status.MigrationStatus == Migrated },
 		n,
 		statuses...,
 	)
 }
 
-func CleanDown(n int, statuses ...MigrationStatus) ([]MigrationStatus, error) {
+func CleanDown(n int, statuses ...Status) ([]Status, error) {
 	return Clean(
-		func(status MigrationStatus) bool { return !status.Migrated },
+		func(status Status) bool { return status.MigrationStatus == Pending },
 		n,
 		statuses...,
 	)
 }
 
 func Clean(
-	alreadyApplied func(MigrationStatus) bool,
+	alreadyApplied func(Status) bool,
 	number int,
-	statuses ...MigrationStatus,
-) ([]MigrationStatus, error) {
+	statuses ...Status,
+) ([]Status, error) {
 	var applying bool
-	var cleaned []MigrationStatus
+	var cleaned []Status
 
 	for _, status := range statuses {
 		// Flip applying when we reach a migration that needs to be applied
@@ -95,15 +110,15 @@ func Clean(
 	return cleaned, nil
 }
 
-func UnMarkMigration(r Runner, m Migration) error {
+func (r Runner) UnMarkMigration(m Migration) error {
 	if !r.NoDry {
 		return nil
 	}
 
-	return r.Client.C(Marker{}).Remove(bson.M{"number": m.Number()})
+	return r.FC.C(Marker{}).Remove(bson.M{"number": m.Number()})
 }
 
-func MarkMigration(r Runner, m Migration) error {
+func (r Runner) MarkMigration(m Migration) error {
 	if !r.NoDry {
 		return nil
 	}
@@ -115,5 +130,15 @@ func MarkMigration(r Runner, m Migration) error {
 		false,
 	}
 
-	return r.Client.C(marker).Insert(marker)
+	return r.FC.C(marker).Insert(marker)
+}
+
+func (r Runner) MarkPartialMigration(m Migration) error {
+	if !r.NoDry {
+		return nil
+	}
+
+	query := bson.M{"number": m.Number(), "partial": true}
+	update := bson.M{"$unset": bson.M{"partial": true}}
+	return r.FC.C(Marker{}).Update(query, update)
 }
