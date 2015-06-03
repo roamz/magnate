@@ -58,7 +58,8 @@ func (u Update) Describe() string {
 }
 
 func (u Update) Execute(c Client) error {
-	return c.C(u.Namer).Update(u.Selector, u.Content)
+	_, err := c.C(u.Namer).UpdateAll(u.Selector, u.Content)
+	return err
 }
 
 type Remove struct {
@@ -81,6 +82,14 @@ func (r Remove) Execute(c Client) error {
 type OpErr struct {
 	error
 	Operation
+}
+
+func (e OpErr) Error() string {
+	return fmt.Sprintf(
+		"unable to perform operation\n\t%s\n\t%s",
+		e.Operation.Describe(),
+		e.error.Error(),
+	)
 }
 
 func Describe(out io.Writer, ops ...Operation) error {
@@ -136,7 +145,7 @@ func (r Runner) Run(ops ...Operation) error {
 
 		if r.NoDry {
 			if err = op.Execute(r.Client); err != nil {
-				return err
+				return OpErr{err, op}
 			}
 		}
 	}
