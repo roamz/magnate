@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/rakyll/pb"
-	"labix.org/v2/mgo"
+	"gopkg.in/mgo.v2"
 )
 
 type Namer interface {
